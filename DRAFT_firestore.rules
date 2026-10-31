@@ -1,0 +1,260 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Default-Deny Catch-All (Pillar 4.1)
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Core Primitives (Phase 3)
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isBootstrappedAdmin() {
+      return isSignedIn() && request.auth.token.email == 'almoatasemmohammed123@gmail.com';
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'almoatasemmohammed123@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Validation Blueprints (Pillar 2)
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['uid', 'displayName', 'employeeCode', 'department', 'role', 'createdAt', 'updatedAt'])
+        && data.keys().hasOnly(['uid', 'displayName', 'employeeCode', 'department', 'role', 'createdAt', 'updatedAt'])
+        && data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 && data.uid.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.uid == request.auth.uid
+        && data.displayName is string && data.displayName.size() >= 1 && data.displayName.size() <= 100
+        && data.employeeCode is string && data.employeeCode.size() >= 1 && data.employeeCode.size() <= 40
+        && data.department is string && data.department.size() >= 1 && data.department.size() <= 80
+        && data.role is string && data.role.size() <= 20 && (data.role == 'employee' || data.role == 'manager')
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidAdminRecord(data) {
+      return data.keys().hasAll(['uid', 'grantedBy', 'createdAt'])
+        && data.keys().hasOnly(['uid', 'grantedBy', 'createdAt'])
+        && data.uid is string && data.uid.size() >= 1 && data.uid.size() <= 128 && data.uid.matches('^[a-zA-Z0-9_\\-]+$')
+        && data.grantedBy is string && data.grantedBy.size() >= 1 && data.grantedBy.size() <= 128
+        && data.grantedBy == request.auth.uid
+        && data.createdAt is timestamp;
+    }
+
+    function isValidOfficialDocument(data) {
+      return data.keys().hasAll([
+          'title', 'referenceNumber', 'category', 'classification',
+          'content', 'keywords', 'authorId', 'authorName', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'title', 'referenceNumber', 'category', 'classification',
+          'content', 'keywords', 'authorId', 'authorName', 'createdAt', 'updatedAt'
+        ])
+        && data.title is string && data.title.size() >= 1 && data.title.size() <= 200
+        && data.referenceNumber is string && data.referenceNumber.size() >= 1 && data.referenceNumber.size() <= 60
+        && data.category is string && data.category.size() >= 1 && data.category.size() <= 80
+        && data.classification is string && data.classification.size() <= 20
+        && (data.classification == 'internal' || data.classification == 'top_secret')
+        && data.content is string && data.content.size() >= 1 && data.content.size() <= 25000
+        && data.keywords is string && data.keywords.size() >= 1 && data.keywords.size() <= 500
+        && data.authorId is string && data.authorId.size() >= 1 && data.authorId.size() <= 128
+        && data.authorId == request.auth.uid
+        && data.authorName is string && data.authorName.size() >= 1 && data.authorName.size() <= 100
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    function isValidActivityLog(data) {
+      return data.keys().hasAll([
+          'employeeId', 'employeeName', 'department', 'userRole',
+          'queryText', 'searchDate', 'searchTime', 'accuracyScore',
+          'matchedDocTitle', 'allocatedSeconds', 'passwordVerified', 'createdAt'
+        ])
+        && data.keys().hasOnly([
+          'employeeId', 'employeeName', 'department', 'userRole',
+          'queryText', 'searchDate', 'searchTime', 'accuracyScore',
+          'matchedDocTitle', 'allocatedSeconds', 'passwordVerified', 'createdAt'
+        ])
+        && data.employeeId is string && data.employeeId.size() >= 1 && data.employeeId.size() <= 128
+        && data.employeeId == request.auth.uid
+        && data.employeeName is string && data.employeeName.size() >= 1 && data.employeeName.size() <= 100
+        && data.department is string && data.department.size() >= 1 && data.department.size() <= 80
+        && data.userRole is string && data.userRole.size() <= 20 && (data.userRole == 'employee' || data.userRole == 'manager')
+        && data.queryText is string && data.queryText.size() >= 1 && data.queryText.size() <= 1000
+        && data.searchDate is string && data.searchDate.size() >= 1 && data.searchDate.size() <= 30
+        && data.searchTime is string && data.searchTime.size() >= 1 && data.searchTime.size() <= 30
+        && data.accuracyScore is number && data.accuracyScore >= 0 && data.accuracyScore <= 100
+        && data.matchedDocTitle is string && data.matchedDocTitle.size() >= 1 && data.matchedDocTitle.size() <= 200
+        && data.allocatedSeconds is number && data.allocatedSeconds >= 5 && data.allocatedSeconds <= 600
+        && data.passwordVerified is bool
+        && data.createdAt is timestamp;
+    }
+
+    function isValidSecurityConfig(data) {
+      return data.keys().hasAll([
+          'employeeUnifiedPassword', 'managerAccessCode', 'wordsPerSecond',
+          'minTimerSeconds', 'maxTimerSeconds', 'strictWatermark',
+          'updatedBy', 'createdAt', 'updatedAt'
+        ])
+        && data.keys().hasOnly([
+          'employeeUnifiedPassword', 'managerAccessCode', 'wordsPerSecond',
+          'minTimerSeconds', 'maxTimerSeconds', 'strictWatermark',
+          'updatedBy', 'createdAt', 'updatedAt'
+        ])
+        && data.employeeUnifiedPassword is string && data.employeeUnifiedPassword.size() >= 4 && data.employeeUnifiedPassword.size() <= 64
+        && data.managerAccessCode is string && data.managerAccessCode.size() >= 4 && data.managerAccessCode.size() <= 64
+        && data.wordsPerSecond is number && data.wordsPerSecond >= 1 && data.wordsPerSecond <= 10
+        && data.minTimerSeconds is number && data.minTimerSeconds >= 5 && data.minTimerSeconds <= 60
+        && data.maxTimerSeconds is number && data.maxTimerSeconds >= 15 && data.maxTimerSeconds <= 300
+        && data.strictWatermark is bool
+        && data.updatedBy is string && data.updatedBy.size() >= 1 && data.updatedBy.size() <= 128
+        && data.updatedBy == request.auth.uid
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // 1. User Profiles Collection
+    match /users/{userId} {
+      allow get: if isSignedIn() && isValidId(userId) && (isOwner(userId) || isAdmin());
+      allow list: if isSignedIn() && (resource.data.uid == request.auth.uid || isBootstrappedAdmin());
+      allow create: if isOwner(userId)
+        && isValidId(userId)
+        && isValidUserProfile(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && (incoming().role == 'employee' || isAdmin());
+      allow update: if isSignedIn()
+        && isValidId(userId)
+        && isValidUserProfile(incoming())
+        && incoming().uid == existing().uid
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          (isOwner(userId)
+            && incoming().role == existing().role
+            && incoming().diff(existing()).affectedKeys().hasOnly(['displayName', 'employeeCode', 'department', 'updatedAt']))
+          || isAdmin()
+        );
+      allow delete: if false;
+    }
+
+    // 2. Trusted Admins Collection
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && isValidId(adminId) && (isOwner(adminId) || isAdmin());
+      allow list: if false;
+      allow create: if isSignedIn()
+        && isValidId(adminId)
+        && isValidAdminRecord(incoming())
+        && incoming().uid == adminId
+        && incoming().createdAt == request.time
+        && isAdmin();
+      allow update: if false;
+      allow delete: if isSignedIn() && isValidId(adminId) && isAdmin();
+    }
+
+    // 3. Official Documents Collection
+    match /documents/{docId} {
+      allow get: if isSignedIn()
+        && isValidId(docId)
+        && (existing().classification == 'internal' || isAdmin());
+      allow list: if isSignedIn()
+        && (resource.data.classification == 'internal' || isBootstrappedAdmin());
+      allow create: if isSignedIn()
+        && isValidId(docId)
+        && isValidOfficialDocument(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && isAdmin();
+      allow update: if isSignedIn()
+        && isValidId(docId)
+        && isValidOfficialDocument(incoming())
+        && incoming().authorId == existing().authorId
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          (incoming().diff(existing()).affectedKeys().hasOnly([
+            'title', 'referenceNumber', 'category', 'classification',
+            'content', 'keywords', 'authorName', 'updatedAt'
+          ]) && isAdmin())
+          || isAdmin()
+        );
+      allow delete: if isSignedIn() && isValidId(docId) && isAdmin();
+    }
+
+    // 4. Immutable Employee Activity Logs Collection
+    match /activity_logs/{logId} {
+      allow get: if isSignedIn()
+        && isValidId(logId)
+        && (existing().employeeId == request.auth.uid || isAdmin());
+      allow list: if isSignedIn()
+        && (resource.data.employeeId == request.auth.uid || isBootstrappedAdmin());
+      allow create: if isSignedIn()
+        && isValidId(logId)
+        && isValidActivityLog(incoming())
+        && incoming().createdAt == request.time;
+      allow update: if isSignedIn()
+        && isValidId(logId)
+        && isValidActivityLog(incoming())
+        && incoming().employeeId == existing().employeeId
+        && incoming().createdAt == existing().createdAt
+        && (
+          (isOwner(existing().employeeId)
+            && existing().passwordVerified == false
+            && incoming().passwordVerified == true
+            && incoming().diff(existing()).affectedKeys().hasOnly(['passwordVerified']))
+          || isAdmin()
+        );
+      allow delete: if false;
+    }
+
+    // 5. Global Security Policy Config
+    match /security_config/{configId} {
+      allow get: if isSignedIn() && isValidId(configId) && configId == 'global';
+      allow list: if false;
+      allow create: if isSignedIn()
+        && isValidId(configId)
+        && configId == 'global'
+        && isValidSecurityConfig(incoming())
+        && incoming().createdAt == request.time
+        && incoming().updatedAt == request.time
+        && isAdmin();
+      allow update: if isSignedIn()
+        && isValidId(configId)
+        && configId == 'global'
+        && isValidSecurityConfig(incoming())
+        && incoming().createdAt == existing().createdAt
+        && incoming().updatedAt == request.time
+        && (
+          (incoming().diff(existing()).affectedKeys().hasOnly([
+            'employeeUnifiedPassword', 'managerAccessCode', 'wordsPerSecond',
+            'minTimerSeconds', 'maxTimerSeconds', 'strictWatermark',
+            'updatedBy', 'updatedAt'
+          ]) && isAdmin())
+          || isAdmin()
+        );
+      allow delete: if false;
+    }
+  }
+}

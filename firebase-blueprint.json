@@ -1,0 +1,353 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Employee or Manager account profile without raw PII.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Firebase Auth UID of the user.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "displayName": {
+          "type": "string",
+          "description": "Full official name of the employee or manager.",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "employeeCode": {
+          "type": "string",
+          "description": "Official institutional employee badge code.",
+          "minLength": 1,
+          "maxLength": 40
+        },
+        "department": {
+          "type": "string",
+          "description": "Organizational department or directorate.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "role": {
+          "type": "string",
+          "description": "System role assignment.",
+          "enum": ["employee", "manager"]
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation server timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update server timestamp."
+        }
+      },
+      "required": ["uid", "displayName", "employeeCode", "department", "role", "createdAt", "updatedAt"]
+    },
+    "AdminRecord": {
+      "title": "AdminRecord",
+      "description": "Trusted admin role assignment document.",
+      "type": "object",
+      "properties": {
+        "uid": {
+          "type": "string",
+          "description": "Admin user UID.",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[a-zA-Z0-9_\\-]+$"
+        },
+        "grantedBy": {
+          "type": "string",
+          "description": "UID of the admin who granted access.",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation server timestamp."
+        }
+      },
+      "required": ["uid", "grantedBy", "createdAt"]
+    },
+    "OfficialDocument": {
+      "title": "OfficialDocument",
+      "description": "Official regulation, policy, or circular used for AI semantic search.",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Document official title.",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "referenceNumber": {
+          "type": "string",
+          "description": "Official circular or regulation reference code.",
+          "minLength": 1,
+          "maxLength": 60
+        },
+        "category": {
+          "type": "string",
+          "description": "Document department or regulatory category.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "classification": {
+          "type": "string",
+          "description": "Clearance level: internal (all employees) or top_secret (managers only).",
+          "enum": ["internal", "top_secret"]
+        },
+        "content": {
+          "type": "string",
+          "description": "Full text content of the official document.",
+          "minLength": 1,
+          "maxLength": 25000
+        },
+        "keywords": {
+          "type": "string",
+          "description": "Comma-separated semantic keywords and colloquial synonyms.",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "authorId": {
+          "type": "string",
+          "description": "UID of the manager who uploaded the document.",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "authorName": {
+          "type": "string",
+          "description": "Name of the manager who uploaded the document.",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation server timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Update server timestamp."
+        }
+      },
+      "required": [
+        "title",
+        "referenceNumber",
+        "category",
+        "classification",
+        "content",
+        "keywords",
+        "authorId",
+        "authorName",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ActivityLog": {
+      "title": "ActivityLog",
+      "description": "Immutable audit record of employee and manager semantic search queries.",
+      "type": "object",
+      "properties": {
+        "employeeId": {
+          "type": "string",
+          "description": "UID of the user who executed the search.",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "employeeName": {
+          "type": "string",
+          "description": "Full name of the employee.",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "department": {
+          "type": "string",
+          "description": "Department of the employee.",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "userRole": {
+          "type": "string",
+          "description": "Role of the user at query time.",
+          "enum": ["employee", "manager"]
+        },
+        "queryText": {
+          "type": "string",
+          "description": "Exact search question or phrase entered.",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "searchDate": {
+          "type": "string",
+          "description": "Formatted date of the search (YYYY-MM-DD).",
+          "minLength": 1,
+          "maxLength": 30
+        },
+        "searchTime": {
+          "type": "string",
+          "description": "Exact time of the search (HH:MM:SS).",
+          "minLength": 1,
+          "maxLength": 30
+        },
+        "accuracyScore": {
+          "type": "number",
+          "description": "Semantic match accuracy percentage (0-100)."
+        },
+        "matchedDocTitle": {
+          "type": "string",
+          "description": "Primary official document matched for this query.",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "allocatedSeconds": {
+          "type": "number",
+          "description": "Calculated smart countdown reading duration in seconds."
+        },
+        "passwordVerified": {
+          "type": "boolean",
+          "description": "Whether the unified employee password was verified to view the answer."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Server timestamp of the search event."
+        }
+      },
+      "required": [
+        "employeeId",
+        "employeeName",
+        "department",
+        "userRole",
+        "queryText",
+        "searchDate",
+        "searchTime",
+        "accuracyScore",
+        "matchedDocTitle",
+        "allocatedSeconds",
+        "passwordVerified",
+        "createdAt"
+      ]
+    },
+    "SecurityConfig": {
+      "title": "SecurityConfig",
+      "description": "Singleton security configuration for unified passwords and countdown timer parameters.",
+      "type": "object",
+      "properties": {
+        "employeeUnifiedPassword": {
+          "type": "string",
+          "description": "Unified password required by employees before viewing AI answers.",
+          "minLength": 4,
+          "maxLength": 64
+        },
+        "managerAccessCode": {
+          "type": "string",
+          "description": "High-sensitivity access code for manager mode and top-secret queries.",
+          "minLength": 4,
+          "maxLength": 64
+        },
+        "wordsPerSecond": {
+          "type": "number",
+          "description": "Reading speed in words per second used to compute countdown timer."
+        },
+        "minTimerSeconds": {
+          "type": "number",
+          "description": "Minimum countdown duration in seconds."
+        },
+        "maxTimerSeconds": {
+          "type": "number",
+          "description": "Maximum countdown duration in seconds."
+        },
+        "strictWatermark": {
+          "type": "boolean",
+          "description": "Whether forensic anti-leak watermark is active."
+        },
+        "updatedBy": {
+          "type": "string",
+          "description": "UID of the manager who last updated the policy.",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Creation server timestamp."
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "Last update server timestamp."
+        }
+      },
+      "required": [
+        "employeeUnifiedPassword",
+        "managerAccessCode",
+        "wordsPerSecond",
+        "minTimerSeconds",
+        "maxTimerSeconds",
+        "strictWatermark",
+        "updatedBy",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "ServerSyncState": {
+      "title": "ServerSyncState",
+      "description": "Synchronized server state across preview and development containers.",
+      "type": "object",
+      "properties": {
+        "vaultToken": {
+          "type": "string",
+          "description": "Server authorization token.",
+          "minLength": 16,
+          "maxLength": 64
+        },
+        "stateData": {
+          "type": "string",
+          "description": "Serialized synchronized state.",
+          "minLength": 2,
+          "maxLength": 900000
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "ISO timestamp of last state sync.",
+          "minLength": 1,
+          "maxLength": 40
+        }
+      },
+      "required": ["vaultToken", "stateData", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Stores employee and manager profiles."
+    },
+    "/admins/{adminId}": {
+      "schema": { "$ref": "#/entities/AdminRecord" },
+      "description": "Trusted collection of manager/admin UIDs."
+    },
+    "/documents/{docId}": {
+      "schema": { "$ref": "#/entities/OfficialDocument" },
+      "description": "Official governmental regulations and circulars for semantic search."
+    },
+    "/activity_logs/{logId}": {
+      "schema": { "$ref": "#/entities/ActivityLog" },
+      "description": "Immutable activity logs tracking every employee search query."
+    },
+    "/security_config/{configId}": {
+      "schema": { "$ref": "#/entities/SecurityConfig" },
+      "description": "Global security policy and unified password configuration."
+    },
+    "/server_state/{vaultId}": {
+      "schema": { "$ref": "#/entities/ServerSyncState" },
+      "description": "Cross-instance synchronized state for backend Express routes."
+    }
+  }
+}
